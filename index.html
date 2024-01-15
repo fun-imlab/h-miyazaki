@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+    />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"
+    />
+  </head>
+  <body>
+    <div id="map" style="height: 400px;"></div>
+    <script>
+      var map = L.map("map").setView([41.753087, 140.715357], 13);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 19,
+      }).addTo(map);
+
+      // マーカークラスターグループを作成
+      var markers = L.markerClusterGroup();
+
+      // 現在地マーカー
+      var currentLocationMarker = L.marker([0, 0], { icon: L.divIcon({ className: 'current-location-icon' }) });
+
+      // JSONファイルを読み込む
+      fetch("mapping_all.json")
+        .then((response) => response.json())
+        .then((data) => {
+          data.forEach((person) => {
+            var marker = L.marker([person.緯度, person.経度]);
+
+            // マーカーにポップアップを追加
+            marker.bindPopup(
+              "<b>" +
+                person.名前 +
+                "</b><br>" +
+                person.年号 +
+                "</b><br>" +
+                person.抽出された言葉 +
+                "</b><br>" +
+                person.抽出された文 +
+                "<br><img src='" +
+                person.写真URL +
+                "' width='110'>"
+            );
+
+            markers.addLayer(marker);
+          });
+
+          map.addLayer(markers);
+        })
+        .catch((error) => {
+          console.error("JSONデータの読み込み中にエラーが発生しました: " + error);
+        });
+
+      // 現在地の取得と表示
+      if ("geolocation" in navigator) {
+        navigator.geolocation.getCurrentPosition(
+          function (position) {
+            var latlng = L.latLng(position.coords.latitude, position.coords.longitude);
+
+            // 現在地マーカーの座標を更新
+            currentLocationMarker.setLatLng(latlng);
+
+            // 地図の中心を現在地に設定
+            map.setView(latlng);
+
+            // マーカーを地図に追加
+            if (!map.hasLayer(currentLocationMarker)) {
+              map.addLayer(currentLocationMarker);
+            }
+          },
+          function (error) {
+            console.error("現在地の取得中にエラーが発生しました: " + error.message);
+          },
+          { enableHighAccuracy: true }
+        );
+
+        // 位置情報が変化した場合に地図を更新
+        navigator.geolocation.watchPosition(
+          function (position) {
+            var latlng = L.latLng(position.coords.latitude, position.coords.longitude);
+
+            // 現在地マーカーの座標を更新
+            currentLocationMarker.setLatLng(latlng);
+          },
+          function (error) {
+            console.error("位置情報の監視中にエラーが発生しました: " + error.message);
+          },
+          { enableHighAccuracy: true }
+        );
+      } else {
+        console.error("このブラウザはGeolocation APIをサポートしていません。");
+      }
+    </script>
+  </body>
+</html>
