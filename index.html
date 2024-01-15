@@ -1,106 +1,73 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
-    />
-    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css"
-    />
-  </head>
-  <body>
-    <div id="map" style="height: 400px;"></div>
-    <script>
-      var map = L.map("map").setView([41.753087, 140.715357], 13);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-        maxZoom: 19,
-      }).addTo(map);
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Clustered Marker Map with Current Location</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
+  <style>
+    #map {
+      height: 97vh; /* 画面の高さいっぱいに地図を表示 */
+    }
 
-      // マーカークラスターグループを作成
-      var markers = L.markerClusterGroup();
+    #centerMapButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1000;
+      background-color: #fff;
+      border: 1px solid #ccc;
+      padding: 10px 20px; /* パディングを大きく */
+      border-radius: 5px;
+      cursor: pointer;
+    }
 
-      // 現在地マーカー
-      var currentLocationMarker = L.marker([0, 0], { icon: L.divIcon({ className: 'current-location-icon' }) });
+    #searchInput {
+      position: absolute;
+      top: 70px;
+      right: 10px;
+      z-index: 1000;
+      padding: 10px;
+    }
 
-      // JSONファイルを読み込む
-      fetch("mapping_all.json")
-        .then((response) => response.json())
-        .then((data) => {
-          data.forEach((person) => {
-            var marker = L.marker([person.緯度, person.経度]);
+    .leaflet-top.leaflet-right {
+      top: 120px !important; /* 現在地に移動ボタンがズームボタンの下に配置されるように調整 */
+    }
 
-            // マーカーにポップアップを追加
-            marker.bindPopup(
-              "<b>" +
-                person.名前 +
-                "</b><br>" +
-                person.年号 +
-                "</b><br>" +
-                person.抽出された言葉 +
-                "</b><br>" +
-                person.抽出された文 +
-                "<br><img src='" +
-                person.写真URL +
-                "' width='110'>"
-            );
+    .popup-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
 
-            markers.addLayer(marker);
-          });
+    .popup-left {
+      flex: 1;
+      padding: 10px;
+    }
 
-          map.addLayer(markers);
-        })
-        .catch((error) => {
-          console.error("JSONデータの読み込み中にエラーが発生しました: " + error);
-        });
+    .popup-right {
+      flex: 1;
+      text-align: right;
+      padding: 10px;
+    }
 
-      // 現在地の取得と表示
-      if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
-          function (position) {
-            var latlng = L.latLng(position.coords.latitude, position.coords.longitude);
+    .popup-image {
+      max-width: 100px;
+    }
+  </style>
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+  <div id="map"></div>
+  <input type="text" id="searchInput" placeholder="名前で検索" oninput="searchMarkers()">
+  <button id="centerMapButton" onclick="centerMap()">現在地に移動</button>
 
-            // 現在地マーカーの座標を更新
-            currentLocationMarker.setLatLng(latlng);
-
-            // 地図の中心を現在地に設定
-            map.setView(latlng);
-
-            // マーカーを地図に追加
-            if (!map.hasLayer(currentLocationMarker)) {
-              map.addLayer(currentLocationMarker);
-            }
-          },
-          function (error) {
-            console.error("現在地の取得中にエラーが発生しました: " + error.message);
-          },
-          { enableHighAccuracy: true }
-        );
-
-        // 位置情報が変化した場合に地図を更新
-        navigator.geolocation.watchPosition(
-          function (position) {
-            var latlng = L.latLng(position.coords.latitude, position.coords.longitude);
-
-            // 現在地マーカーの座標を更新
-            currentLocationMarker.setLatLng(latlng);
-          },
-          function (error) {
-            console.error("位置情報の監視中にエラーが発生しました: " + error.message);
-          },
-          { enableHighAccuracy: true }
-        );
-      } else {
-        console.error("このブラウザはGeolocation APIをサポートしていません。");
-      }
-    </script>
-  </body>
+  <script src="script.js"></script>
+</body>
 </html>
